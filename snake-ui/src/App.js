@@ -6,7 +6,7 @@ import Game from './components/game/Game'
 class App extends Component {
 
   state = {
-    speed: 300,
+    speed: 200,
     grid: 500
   }
 
@@ -50,10 +50,10 @@ class App extends Component {
           <h2 className="snakeGame__header">Game Settings</h2>
 
           <div className="snakeGame__settingsBox">
-            <button onClick={() => this.gameSettings('inc')}>Increase Speed</button>
-            <button onClick={() => this.gameSettings('dec')}>Decrease Speed</button>
-            <button onClick={() => this.gameSettings('incSize')}>Increase Size</button>
-            <button onClick={() => this.gameSettings('decSize')}>Decrease Size</button>
+            <button className="inc" onClick={() => this.gameSettings('inc')}>Increase Speed</button>
+            <button className="incSize" onClick={() => this.gameSettings('incSize')}>Increase Size</button>
+            <button className="dec" onClick={() => this.gameSettings('dec')}>Decrease Speed</button>
+            <button className="decSize" onClick={() => this.gameSettings('decSize')}>Decrease Size</button>
           </div>
         </div>
       </div>
