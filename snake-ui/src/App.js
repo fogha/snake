@@ -307,7 +307,7 @@ class App extends Component {
 
             <div className="leaderboard">
               {
-                scores.map((score, i) => {
+                scores && scores.map((score, i) => {
                   if (i < 10) {
                     return (
                       <div key={i} className="snakeGame__leaderboard">
