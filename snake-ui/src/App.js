@@ -13,30 +13,26 @@ const getRandomFoodCoordinates = () => {
   return [x, y];
 }
 
-const initialState = {
-  snakeDots: [
-    [0, 0],
-  ],
-  snakeFood: getRandomFoodCoordinates(),
-  direction: 'RIGHT',
-  speed: 200,
-  grid: 500,
-  points: 10,
-  gameName: '',
-  scores: []
-}
-
 class App extends Component {
 
   state = {
-    ...initialState,
+    snakeDots: [
+      [0, 0],
+    ],
+    snakeFood: getRandomFoodCoordinates(),
+    direction: 'RIGHT',
+    speed: 200,
+    grid: 500,
+    points: 10,
+    userName: '',
+    scores: [],
+    pause: false,    
     savedGames: []
   }
 
   componentDidMount() {
     this.getSavedGames()
     this.getHighScores()
-    this.setState({ speed: this.props.speed })
     setInterval(this.snakeMovement, this.state.speed)
     document.onkeydown = this.snakeControls
   }
@@ -45,21 +41,43 @@ class App extends Component {
     this.checkTouchingBorders();
     this.checkTouchSelf();
     this.checkEat();
-    this.getHighScores()
-
+    this.getHighScores();
   }
 
   //getting all the games that have been saved
   getSavedGames = () => {
+    //const { savedGames } = this.state;
     fetch('/api').then(response => {
       if (response.ok) {
         return response.json();
       }
-    }).then(data => console.log(data))
+    }).then(data => {
+      this.setState({
+        savedGames: data
+      })
+      return this.getUserName()
+    })
 
   }
 
-  //
+  getUserName = () => {
+    const { savedGames } = this.state;
+    let uname = prompt('Enter user name');
+    console.log(uname);
+    console.log(this.state);
+    console.log(savedGames);
+    savedGames.forEach(game => {
+      if (game.name === uname) {
+        uname = prompt('User name taken, please enter another')
+      } else {
+        this.setState({
+          userName: uname
+        })
+      }
+    });
+  }
+
+  //GEtting direction based on arrow key pressed
   snakeControls = e => {
     e = e || window.event;
 
@@ -139,15 +157,22 @@ class App extends Component {
 
   //Ending the game
   gameOver = () => {
-    const { points, savedGames } = this.state;
+    const { points, userName } = this.state;
     this.setState({
-      ...initialState,
-      savedGames
+      snakeDots: [
+        [0, 0],
+      ],
+      snakeFood: getRandomFoodCoordinates(),
+      direction: 'RIGHT',
+      speed: 200,
+      grid: 500,
+      points: 10,
+      scores: [],
     })
     fetch('/api/save-game', {
       method: 'POST',
       body: JSON.stringify({
-        name: prompt("Enter Name to save the game"),
+        name: userName,
         points: points,
       }),
       headers: {
@@ -155,62 +180,72 @@ class App extends Component {
       }
     }).then(res => res.json())
       .then(res => {
-        if (res.httpCode === 201) {
+        if (res.httpCode === '201') {
           this.setState({
-            ...initialState,
-            savedGames
+            snakeDots: [
+              [0, 0],
+            ],
+            snakeFood: getRandomFoodCoordinates(),
+            direction: 'RIGHT',
+            speed: 200,
+            grid: 500,
+            points: 10,
+            scores: [],
+            pause: false
           });
           alert(res.message)
         }
       })
   }
 
+  //GEtting the highest scores to be displayed
   getHighScores = () => {
     fetch('/api/leaderboard').then(response => {
       if (response.ok) {
         return response.json();
       }
     }).then(data => {
-      console.log(data);
       this.setState({
         scores: data
       })
     })
-
   }
 
   //Moving the snake when the arrow keys are pressed
   snakeMovement = () => {
-    const { direction } = this.state;
-    let dots = [...this.state.snakeDots];
-    let head = dots[dots.length - 1];
+    const { pause } = this.state
+    if (pause == false) {
+      const { direction } = this.state;
+      let dots = [...this.state.snakeDots];
+      let head = dots[dots.length - 1];
 
-    switch (direction) {
-      case 'RIGHT':
-        head = [head[0] + 2, head[1]];
-        break;
+      switch (direction) {
+        case 'RIGHT':
+          head = [head[0] + 2, head[1]];
+          break;
 
-      case 'LEFT':
-        head = [head[0] - 2, head[1]];
-        break;
+        case 'LEFT':
+          head = [head[0] - 2, head[1]];
+          break;
 
-      case 'DOWN':
-        head = [head[0], head[1] + 2];
-        break;
+        case 'DOWN':
+          head = [head[0], head[1] + 2];
+          break;
 
-      case 'UP':
-        head = [head[0], head[1] - 2];
-        break;
+        case 'UP':
+          head = [head[0], head[1] - 2];
+          break;
 
-      default:
-        break;
+        default:
+          break;
+      }
+
+      dots.push(head);
+      dots.shift();
+      this.setState({
+        snakeDots: dots
+      })
     }
-
-    dots.push(head);
-    dots.shift();
-    this.setState({
-      snakeDots: dots
-    })
   }
 
   //Configurations that can be done on the game
@@ -220,7 +255,7 @@ class App extends Component {
     switch (type) {
       case "inc":
         if (speed > 100) {
-          console.log("inc");
+
           let newSpeed = speed - 100;
           this.setState({ speed: newSpeed })
         } 
@@ -241,18 +276,16 @@ class App extends Component {
       default:
         break;
     }
-
-    console.log(this.state);
   } 
 
   //Saving the game in order to continue late
   onClickSave = () => {
-    const { points, snakeDots, savedGames, gameName } = this.state;
+    const { points, snakeDots, userName } = this.state;
 
     fetch('/api/create', {
       method: 'POST',
       body: JSON.stringify({
-        name: gameName,
+        name: userName,
         points: points,
         snake: snakeDots
       }),
@@ -263,20 +296,30 @@ class App extends Component {
       .then(res => {
         if (res.httpCode === '201') {
           this.setState({
-            ...initialState,
-            savedGames
+            snakeDots: [
+              [0, 0],
+            ],
+            snakeFood: getRandomFoodCoordinates(),
+            direction: 'RIGHT',
+            speed: 200,
+            grid: 500,
+            points: 10,
+            scores: [],
+            pause: false,
           })
           alert(res.message)
         }
       })
   }
 
-  onChangeInput = () => {
-
+  onChangeInput = (e) => {
+    this.setState({
+      gameName: e.target.value
+    })
   }
 
   render() {
-    const { grid, snakeDots, snakeFood, points, scores } = this.state;
+    const { grid, snakeDots, snakeFood, points, scores, pause, userName, speed } = this.state;
     const gameStyle = {
       width: `${grid}px`,
       height: `${grid}px`
@@ -293,7 +336,12 @@ class App extends Component {
 
           <div className="snakeGame__settingsBox">
 
-            <p>Points: {points}</p>
+            <div className="snakeGame__gameInfo">
+              <p>Points: {points}</p>
+              <p>User: {userName}</p>
+              <p>Speed: {speed}</p>
+              <p>Grid size: {grid}</p>
+            </div>
 
             <button className="inc" onClick={() => this.gameSettings('inc')}>Increase Speed</button>
             <button className="incSize" onClick={() => this.gameSettings('incSize')}>Increase Size</button>
@@ -301,7 +349,7 @@ class App extends Component {
             <button className="decSize" onClick={() => this.gameSettings('decSize')}>Decrease Size</button>
 
             <div className="snakeGame__controls">
-              <input type="text" placeholder="Enter game name" onChange={(e) => this.setState({ gameName: e.target.value}) } />
+              <button className="save" onClick={() => this.setState({ pause: !pause })}> Play/Pause</button>
               <button className="save" onClick={() => this.onClickSave()}> Save Game </button>
             </div>
 

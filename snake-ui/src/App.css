@@ -46,7 +46,6 @@
 .snakeGame__settingsBox > p {
   color: #fff;
   font-size: 32px;
-  width: 100%;
   padding: 1% 2%;
 }
 
@@ -61,17 +60,17 @@
   width: 100%;
 }
 
-.save {
-  height: 40px;
-  width: 20%;
-  border: 1px solid black;
-  border-radius: 3px;
-  font-family: 'Bungee Shade', cursive;
-  margin: 1%;
-  background-color: rgb(218, 218, 218);
+.snakeGame__gameInfo {
+  display: flex;
+  justify-content: space-between;
+  width: 75%;
+  padding: 0 2%;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 500;
 }
 
-.snakeGame__settingsBox > button {
+ button {
   height: 40px;
   width: 35%;
   border: 1px solid black;
@@ -116,7 +115,6 @@ input {
   border-bottom: 1px solid grey;
   padding: 2%;
   justify-content: space-between;
-  font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
 }
 
 .snakeGame__leaderboard:hover {
