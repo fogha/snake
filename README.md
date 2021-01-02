@@ -14,8 +14,8 @@ After cloning the repo you will have to run the following commands:
 In order to get the backend running, you will also have to run the 
 following commands, assuming you already have python3, flask and pip installed:
   1.  ```cd snake-api```
-  1   ```virtualenv -p python venv``` - creating a virtual environment called venv
+  1.   ```virtualenv -p python venv``` - creating a virtual environment called venv
   1.  ```source ./venv/bin/activate ``` - to activate the virtual environment
   1.  ```pip install Flask ``` - to install flask
-  1   ```pip install Flask-SQLAlchemy```- to install SQLAlchemy
+  1.   ```pip install Flask-SQLAlchemy```- to install SQLAlchemy
   1.  ```python app.py```
