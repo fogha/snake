@@ -1,4 +1,5 @@
 import React, { Component } from 'react';
+import Modal from 'react-modal';
 import './App.css';
 
 import SnakeFood from './components/food/SnakeFood';
@@ -11,6 +12,20 @@ const getRandomFoodCoordinates = () => {
   let y = Math.floor((Math.random() * (max - min + 1) + min) / 2) * 2;
 
   return [x, y];
+}
+
+const initialiseState = {
+  snakeDots: [
+    [0, 0],
+  ],
+  snakeFood: getRandomFoodCoordinates(),
+  direction: 'RIGHT',
+  speed: 200,
+  grid: 500,
+  points: 10,
+  scores: [],
+  pause: false,
+  gameId: ''
 }
 
 class App extends Component {
@@ -27,7 +42,9 @@ class App extends Component {
     userName: '',
     scores: [],
     pause: false,    
-    savedGames: []
+    savedGames: [],
+    loadGame: false,
+    gameId: ''
   }
 
   componentDidMount() {
@@ -46,7 +63,6 @@ class App extends Component {
 
   //getting all the games that have been saved
   getSavedGames = () => {
-    //const { savedGames } = this.state;
     fetch('/api').then(response => {
       if (response.ok) {
         return response.json();
@@ -55,29 +71,61 @@ class App extends Component {
       this.setState({
         savedGames: data
       })
-      return this.getUserName()
-    })
-
+      this.getUserOption()
+    }).catch((error) => console.log(error))
   }
 
+  //getting the username
   getUserName = () => {
     const { savedGames } = this.state;
     let uname = prompt('Enter user name');
-    console.log(uname);
-    console.log(this.state);
-    console.log(savedGames);
-    savedGames.forEach(game => {
-      if (game.name === uname) {
-        uname = prompt('User name taken, please enter another')
-      } else {
-        this.setState({
-          userName: uname
-        })
-      }
-    });
+
+    if (uname === '' || uname === ' ') {
+      uname = prompt('invalid name, please try again')
+    } else {
+
+      savedGames && savedGames.forEach(game => {
+        if (game.name === uname) {
+          uname = prompt('User name taken, please enter another')
+        } else {
+          this.setState({
+            userName: uname
+          })
+        }
+      });
+    }
+
   }
 
-  //GEtting direction based on arrow key pressed
+  //getting what the user would want to do when the game is loaded
+  getUserOption = () => {
+    const { userName } = this.state;
+    // eslint-disable-next-line no-restricted-globals
+    let res = prompt("Choose an action from the list below \n'1' to start a new game, \n'2' to load a saved Game");
+
+    if (res === '1') {
+      if(userName === '') this.getUserName()
+    } else if( res === '2') {
+      if(userName === '') {
+        let uname = prompt('Enter the username used to save the game');
+        this.setState({
+          userName: uname,
+          loadGame: true,
+          pause: true
+        })
+
+      } else {
+        this.setState({
+          loadGame: true,
+          pause: true
+        })
+     }
+    } else {
+      res = prompt("Invalid option, try again \n'1' to start a new game, \n'2' to load a saved Game");
+    } 
+  }
+
+  //Getting direction based on arrow key pressed
   snakeControls = e => {
     e = e || window.event;
 
@@ -107,7 +155,7 @@ class App extends Component {
   checkTouchingBorders = () => {
     const { snakeDots } = this.state;
     let head = snakeDots[snakeDots.length - 1];
-    if (head[0] >= 100 || head[0] < 0 || head[1] >= 100 || head[1] < 0) {
+    if (head && (head[0] >= 100 || head[0] < 0 || head[1] >= 100 || head[1] < 0)) {
       this.gameOver()
     }
   }
@@ -126,13 +174,17 @@ class App extends Component {
   //checking when the snake collides with the dot
   checkEat = () => {
     const { snakeDots, snakeFood, points } = this.state;
+
     let snake = snakeDots[snakeDots.length - 1];
-    if (snake[0] === snakeFood[0] && snake[1] === snakeFood[1]) {
+    if (snake && (snake[0] === snakeFood[0] && snake[1] === snakeFood[1])) {
+      let newSnake = [...this.state.snakeDots];
+      newSnake.unshift([]);
+ 
       this.setState({
         snakeFood: getRandomFoodCoordinates(),
-        points: points + 10
+        points: points + 10,
+        snakeDots: newSnake
       })
-      this.enlargeSnake();
       this.increaseSpeed();
     }
   }
@@ -155,25 +207,19 @@ class App extends Component {
     }
   }
 
-  //Ending the game
+  //function to end the game
   gameOver = () => {
     const { points, userName } = this.state;
-    this.setState({
-      snakeDots: [
-        [0, 0],
-      ],
-      snakeFood: getRandomFoodCoordinates(),
-      direction: 'RIGHT',
-      speed: 200,
-      grid: 500,
-      points: 10,
-      scores: [],
-    })
-    fetch('/api/save-game', {
+    this.setState(
+      initialiseState
+    )
+    fetch('/api/create', {
       method: 'POST',
       body: JSON.stringify({
         name: userName,
         points: points,
+        snake: [],
+        completed: 1
       }),
       headers: {
         "Content-type": "application/json; charset=UTF-8"
@@ -181,21 +227,10 @@ class App extends Component {
     }).then(res => res.json())
       .then(res => {
         if (res.httpCode === '201') {
-          this.setState({
-            snakeDots: [
-              [0, 0],
-            ],
-            snakeFood: getRandomFoodCoordinates(),
-            direction: 'RIGHT',
-            speed: 200,
-            grid: 500,
-            points: 10,
-            scores: [],
-            pause: false
-          });
-          alert(res.message)
+          alert(res.message);
+          this.getUserOption();
         }
-      })
+      }).catch(() => alert('Failed to save game'))
   }
 
   //GEtting the highest scores to be displayed
@@ -208,6 +243,8 @@ class App extends Component {
       this.setState({
         scores: data
       })
+    }).catch((error) => {
+      console.log(error);
     })
   }
 
@@ -254,15 +291,15 @@ class App extends Component {
 
     switch (type) {
       case "inc":
-        if (speed > 100) {
+        if (speed > 50) {
 
-          let newSpeed = speed - 100;
+          let newSpeed = speed - 50;
           this.setState({ speed: newSpeed })
         } 
         break;
     
       case "dec":
-        speed < 300 && this.setState({ speed: speed + 100 })
+        speed < 300 && this.setState({ speed: speed + 50 })
         break;
       
       case "incSize":
@@ -278,16 +315,48 @@ class App extends Component {
     }
   } 
 
-  //Saving the game in order to continue late
+  //Saving the game in order to continue later
   onClickSave = () => {
-    const { points, snakeDots, userName } = this.state;
+    const { points, snakeDots, userName, gameId } = this.state;
 
-    fetch('/api/create', {
+    if (gameId !== '') {
+        return this.updateSavedGame()
+      }
+
+      fetch('/api/create', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: userName,
+          points: points,
+          snake: snakeDots,
+          completed: 0
+        }),
+        headers: {
+          "Content-type": "application/json; charset=UTF-8"
+        }
+      }).then(res => res.json())
+        .then(res => {
+          if (res.httpCode === '201') {
+            this.setState(
+              initialiseState
+            );
+            alert(res.message)
+          }
+        }).catch(() => alert('Failed to save game data'))
+    
+  }
+
+  updateSavedGame = () => {
+    const { gameId, userName, points, snakeDots } = this.state;
+
+    fetch(`/api/update/${gameId}`, {
       method: 'POST',
       body: JSON.stringify({
+        id: gameId,
         name: userName,
         points: points,
-        snake: snakeDots
+        snake: snakeDots,
+        completed: 0
       }),
       headers: {
         "Content-type": "application/json; charset=UTF-8"
@@ -295,35 +364,52 @@ class App extends Component {
     }).then(res => res.json())
       .then(res => {
         if (res.httpCode === '201') {
-          this.setState({
-            snakeDots: [
-              [0, 0],
-            ],
-            snakeFood: getRandomFoodCoordinates(),
-            direction: 'RIGHT',
-            speed: 200,
-            grid: 500,
-            points: 10,
-            scores: [],
-            pause: false,
-          })
+          this.setState(
+            initialiseState
+          );
           alert(res.message)
         }
-      })
+      }).catch(() => alert('Failed to update game data'))
   }
 
-  onChangeInput = (e) => {
+  //closing the modal
+  closeModal = () => {
+    this.setState({ loadGame: false })
+  }
+
+  //load saved game into state
+  loadGame = (game) => {
+    console.log(game);
     this.setState({
-      gameName: e.target.value
+      snakeDots: game.snake,
+      points: game.points,
+      pause: true,
+      loadGame: false,
+      gameId: game.id
     })
   }
 
   render() {
-    const { grid, snakeDots, snakeFood, points, scores, pause, userName, speed } = this.state;
+    const {
+      grid, snakeDots, snakeFood, points, scores, pause, userName, speed, loadGame, savedGames
+    } = this.state;
+
     const gameStyle = {
-      width: `${grid}px`,
+      width: `${grid + 350}px`,
       height: `${grid}px`
     }
+
+    const customStyles = {
+      content: {
+        top: '20%',
+        left: '50%',
+        right: 'auto',
+        bottom: 'auto',
+        marginRight: '-50%',
+        transform: 'translate(-50%, -50%)',
+        width: '30%'
+      }
+    };
     
     return (
       <div className="snakeGame">
@@ -343,35 +429,74 @@ class App extends Component {
               <p>Grid size: {grid}</p>
             </div>
 
-            <button className="inc" onClick={() => this.gameSettings('inc')}>Increase Speed</button>
-            <button className="incSize" onClick={() => this.gameSettings('incSize')}>Increase Size</button>
-            <button className="dec" onClick={() => this.gameSettings('dec')}>Decrease Speed</button>
-            <button className="decSize" onClick={() => this.gameSettings('decSize')}>Decrease Size</button>
+            <button className="snakeGame__infoButtons inc" onClick={() => this.gameSettings('inc')}>Increase Speed</button>
+            <button className="snakeGame__infoButtons incSize" onClick={() => this.gameSettings('incSize')}>Increase Size</button>
+            <button className="snakeGame__infoButtons dec" onClick={() => this.gameSettings('dec')}>Decrease Speed</button>
+            <button className="snakeGame__infoButtons decSize" onClick={() => this.gameSettings('decSize')}>Decrease Size</button>
 
             <div className="snakeGame__controls">
-              <button className="save" onClick={() => this.setState({ pause: !pause })}> Play/Pause</button>
-              <button className="save" onClick={() => this.onClickSave()}> Save Game </button>
+              <button className="snakeGame__infoButtons save" onClick={() => this.setState({ pause: !pause })}> Play/Pause</button>
+              <button className="snakeGame__infoButtons save" onClick={() => this.onClickSave()}> Save Game </button>
             </div>
 
             <div className="leaderboard">
               {
-                scores && scores.map((score, i) => {
-                  if (i < 10) {
-                    return (
-                      <div key={i} className="snakeGame__leaderboard">
-                        <p className="snakeGame__leaderboard-name">
-                          {score.name}
-                        </p>
-                        <p className="snakeGame__leaderboard-points">
-                          {score.points}
-                        </p>
-                      </div>
-                    )
-                  }
-                })
+                scores && scores.length === 0 ? (
+                  <div className="modal__noGame">
+                    <h2>No scores on leaderboard yet</h2>
+                  </div>
+                ) : (
+                    scores.map((score, i) => {
+                      if (i < 11) {
+                        return (
+                          <div key={i} className="snakeGame__leaderboard">
+                            <p className="snakeGame__leaderboard-name">
+                              {score.name}
+                            </p>
+                            <p className="snakeGame__leaderboard-points">
+                              {score.points}
+                            </p>
+                          </div>
+                        )
+                    }
+                }))
+                
               }
             </div>
             
+            <div id="modal">
+              <Modal
+                isOpen={loadGame}
+                onRequestClose={this.closeModal} 
+                style={customStyles}
+                contentLabel="Load Game"
+                ariaHideApp={false}
+              >
+                <div className="modal__headerBox">
+                  <h2 className="modal__header">Load Game</h2>
+                  <button className="modal__close" onClick={() => this.closeModal()}>x</button>
+                </div>
+                
+                <div>
+                  {
+                    savedGames.map((game, i) => {
+                      console.log(game);
+                      if (game.name === userName && game.completed === 0) {
+                        const name = game.name;
+                        const points = game.points;
+                        console.log(name, points);
+                        return (
+                          <div key={i} role="Presentation" onClick={() => this.loadGame(game)} className="loadGame__button">
+                            <p>{name}</p>
+                            <p>{points}</p>
+                          </div>                          
+                        )
+                      }
+                    }) 
+                  }
+                </div>
+              </Modal>
+            </div>
           </div>
         </div>
       </div>
