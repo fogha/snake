@@ -10,6 +10,7 @@ After cloning the repo you will have to run the following commands:
   1.  ```npm install``` - to install packages
   1.  ```npm start```
     
+Navigate to http://localhost:3000/ to see the app running.
   
 In order to get the backend running, you will also have to run the 
 following commands, assuming you already have python3, flask and pip installed:
@@ -19,3 +20,5 @@ following commands, assuming you already have python3, flask and pip installed:
   1.  ```pip install Flask ``` - to install flask
   1.   ```pip install Flask-SQLAlchemy```- to install SQLAlchemy
   1.  ```python app.py```
+
+Navigate to http://localhost:5000/api to see the api running.
